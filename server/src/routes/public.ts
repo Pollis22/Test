@@ -61,9 +61,11 @@ publicRouter.get('/shops/:slug', async (req, res) => {
 
 publicRouter.get('/shops/:slug/availability', async (req, res) => {
   try {
+    const raw = req.query as Record<string, string | undefined>;
     const q = z
       .object({ service: z.string().uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), staff: z.string().uuid().optional() })
-      .parse(req.query);
+      // accept both ?service= and ?serviceId= (audit finding: matches the POST body naming)
+      .parse({ service: raw.service ?? raw.serviceId, date: raw.date, staff: raw.staff ?? raw.staffId });
     const shop = await getShopBySlug(req.params.slug);
     if (!shop) return res.status(404).json({ error: 'NOT_FOUND' });
     await expirePendingHolds(); // lazily release stale holds before quoting

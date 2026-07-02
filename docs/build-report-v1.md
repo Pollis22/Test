@@ -94,9 +94,18 @@ proxy-blocked — see runbook §1).
 - Live HTTP round-trips on the running server (mock payments): free-cancel
   path and late-cancel path both verified end-to-end, incl. policy emails
   (4 mock emails observed) and voice tools.
-- Fresh-clone audit (`npm ci` → build → tests → seed → HTTP round-trip):
-  results recorded in this file's revision after the audit sub-agent returned —
-  see commit message of the final commit.
+- **Fresh-clone audit (independent sub-agent): PASS.** From a fresh clone +
+  fresh database: `npm ci` clean against the lockfile, full build green,
+  **24/24 tests**, seed exact (1 shop / 2 staff / 4 services / 12 rules /
+  `$2b$10` owner hash), live HTTP round-trip verified (book → mock pay →
+  manage quote free → cancel → full $35 refund), zero server-log errors.
+  Audit recommendations acted on post-audit: availability endpoint now accepts
+  both `?service=`/`?serviceId=` (and staff variants); runtime `bcrypt` bumped
+  5.x → 6.x (npm-audit high), tests re-run 24/24. Remaining recommendations
+  logged: dev-tooling npm-audit findings (vitest/vite, dev-only), pre-existing
+  `index.html` notebook artifact at repo root (predates this build — remove
+  during the repo move, runbook §1), seed default password must be overridden
+  in real environments (runbook §6).
 
 ## Bugs found & fixed during verification
 1. bcryptjs emits `$2a$` — violates the `$2b$10` house rule → swapped to native bcrypt.
