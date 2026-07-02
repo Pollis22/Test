@@ -14,5 +14,25 @@
   mock mode behind feature flags.
 - Build progress is tracked per-phase in `docs/build-report-v1.md`.
 
+## What was built (7/2/26, phases 0–7 complete)
+Full Prelo Booking vertical slice, verified green: schema + exclusion-constraint
+double-booking guard (executed on local PG 16), slot engine (DST-safe), booking
+lifecycle with 10-min holds, cancellation single-source-of-truth (24h/$10,
+refund floor 0, explicit fee acceptance gates on web AND voice), mock payments
+driving the real webhook path, barber dashboard, 7 HMAC voice tools +
+committed agent config, cron reminders/expiry, Google flag-off.
+24/24 tests incl. 6 DB integration (race, expiry, refund math); live HTTP
+round-trips for free-cancel, late-cancel, and voice paths. 5 real bugs found
+and fixed during verification (see build-report-v1.md).
+
+## Decisions made
+- `blocked_until` column so the DB constraint covers service buffers.
+- Non-test Stripe keys refused at env parse (live charges impossible).
+- Late-fee disclosure enforced server-side for the voice agent (two-call
+  confirm pattern) — the model can't skip it.
+- Local Postgres cluster used for real verification since no remote DB existed.
+
 ## Pending / next session
-- See `docs/deploy-runbook-v1.md` — everything that needs Pollis.
+- See `docs/deploy-runbook-v1.md` — repo move (§1), Railway (§2), secrets (§3),
+  ElevenLabs provisioning (§4), Stripe test verification (§3.1).
+- Backlog list at the end of `docs/build-report-v1.md`.
