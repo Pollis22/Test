@@ -1,0 +1,70 @@
+{
+  "_comment": "Prelo Booking Agent — ElevenLabs ConvAI config. No ELEVENLABS_API_KEY was present at build time; provision via API or dashboard per docs/deploy-runbook-v1.md. Tool URLs point at /api/tools/* with HMAC header x-tool-signature (hex sha256 over raw body, secret = ELEVENLABS_TOOL_SECRET).",
+  "name": "Prelo Booking Agent",
+  "conversation_config": {
+    "agent": {
+      "first_message": "Thanks for calling {{shop_name}}! This is the booking assistant. Are you looking to book, change, or cancel an appointment?",
+      "language": "en",
+      "prompt": {
+        "prompt": "You are the friendly phone booking assistant for {{shop_name}}, a barbershop using Prelo Booking. Keep replies short and natural for voice.\n\nRULES (non-negotiable):\n1. At the start of every call, call identify_caller with the caller's phone number. If they are a returning customer, greet them by name and reference their last visit.\n2. To book: collect service, preferred staff (or any), day/time, full name, phone, and email. Use check_availability before proposing times. BEFORE calling book_appointment you MUST read the cancellation policy aloud: 'Free cancellation until {{cancel_cutoff_hours}} hours before your appointment. Cancellations within {{cancel_cutoff_hours}} hours incur a {{late_fee}} fee.' and get acknowledgement. Bookings are only confirmed after payment — tell the caller a payment link is being emailed and the slot is held for 10 minutes.\n3. To cancel: call cancel_appointment. If the tool responds with requiresFeeConfirmation, you MUST read the fee disclosure sentence it returns VERBATIM, ask for an explicit yes or no, and only call the tool again with fee_accepted=true if the caller clearly says yes. Never cancel with a fee without a spoken yes.\n4. To reschedule: only possible outside the cancellation window. Inside the window, offer to keep the appointment or cancel with the fee.\n5. Never discuss the technology stack, AI providers, or internal systems. For anything beyond appointments, offer to take a message for the shop.\n6. Amounts: always speak dollars naturally ('ten dollars', not 'one thousand cents').",
+        "llm": "claude-sonnet-5",
+        "temperature": 0.4
+      }
+    },
+    "tts": { "model_id": "eleven_turbo_v2_5" },
+    "asr": { "quality": "high" }
+  },
+  "platform_settings": {
+    "post_call_webhook": {
+      "url": "{{APP_BASE_URL}}/api/tools/post_call",
+      "note": "HMAC-signed like all tool calls"
+    }
+  },
+  "tools": [
+    {
+      "type": "webhook", "name": "identify_caller",
+      "description": "Look up the caller by phone number. Call at the start of every call.",
+      "url": "{{APP_BASE_URL}}/api/tools/identify_caller",
+      "method": "POST",
+      "body_schema": { "shop_slug": "string", "phone": "string (E.164)" }
+    },
+    {
+      "type": "webhook", "name": "check_availability",
+      "description": "List open times for a service on a date, optionally for a specific staff member.",
+      "url": "{{APP_BASE_URL}}/api/tools/check_availability",
+      "method": "POST",
+      "body_schema": { "shop_slug": "string", "service_name": "string", "date": "YYYY-MM-DD", "staff_name": "string?" }
+    },
+    {
+      "type": "webhook", "name": "book_appointment",
+      "description": "Hold a slot (pending payment) after the policy has been read aloud. A payment link is emailed; the hold lasts 10 minutes.",
+      "url": "{{APP_BASE_URL}}/api/tools/book_appointment",
+      "method": "POST",
+      "body_schema": { "shop_slug": "string", "service_name": "string", "staff_name": "string?", "starts_at": "ISO datetime", "customer_name": "string", "phone": "E.164", "email": "string?" }
+    },
+    {
+      "type": "webhook", "name": "get_my_appointments",
+      "description": "List the caller's upcoming appointments by phone number.",
+      "url": "{{APP_BASE_URL}}/api/tools/get_my_appointments",
+      "method": "POST",
+      "body_schema": { "shop_slug": "string", "phone": "E.164" }
+    },
+    {
+      "type": "webhook", "name": "cancel_appointment",
+      "description": "Cancel the caller's appointment. Inside the late window the first call returns the fee disclosure to read verbatim; call again with fee_accepted=true ONLY after an explicit spoken yes.",
+      "url": "{{APP_BASE_URL}}/api/tools/cancel_appointment",
+      "method": "POST",
+      "body_schema": { "shop_slug": "string", "phone": "E.164", "booking_id": "uuid?", "fee_accepted": "boolean" }
+    },
+    {
+      "type": "webhook", "name": "reschedule_appointment",
+      "description": "Move a confirmed appointment to a new time. Only works outside the cancellation window.",
+      "url": "{{APP_BASE_URL}}/api/tools/reschedule_appointment",
+      "method": "POST",
+      "body_schema": { "shop_slug": "string", "phone": "E.164", "booking_id": "uuid?", "new_starts_at": "ISO datetime" }
+    }
+  ],
+  "widget": {
+    "note": "Reuse the prelo web-widget bundle pattern pointed at this agent id once provisioned; embed on the shop's booking page."
+  }
+}
