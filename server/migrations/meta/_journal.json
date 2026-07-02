@@ -1,0 +1,7 @@
+{
+  "version": "1",
+  "note": "Every versioned .sql at repo root MUST be registered here — the boot migrator applies unapplied entries in order. An unjournaled migration is silently skipped in prod (house rule after the 7/1 Prelo outage).",
+  "entries": [
+    { "idx": 0, "tag": "booking-schema-v1", "file": "booking-schema-v1.sql" }
+  ]
+}
